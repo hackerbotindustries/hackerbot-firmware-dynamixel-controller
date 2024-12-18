@@ -15,8 +15,6 @@ in a specified directions. Also, commands to enable/diable idle mode.
 #include <Adafruit_NeoPixel.h>
 #include <Wire.h>
 
-Adafruit_NeoPixel onboard_pixel(1, PIN_NEOPIXEL);
-
 // Set up variables and constants for dynamixel control
 #define DXL_SERIAL   Serial1
 
@@ -41,6 +39,8 @@ float position_vert;
 int position_delay;
 int position_speed;
 
+// Set up the onboard neopixel
+Adafruit_NeoPixel onboard_pixel(1, PIN_NEOPIXEL);
 
 // I2C Rx Handler
 void I2C_RxHandler(int numBytes) {
@@ -52,41 +52,40 @@ void I2C_RxHandler(int numBytes) {
     DEBUG_SERIAL.print(" ");
   }
 
-  Serial.println();
+  DEBUG_SERIAL.println();
 
   // Parse incoming commands
   switch (RxArray[0]) {
-    case 0x00: // Set_IDLE Command - Params(0 = Off, 1 = On)
-      Serial.println("Set_IDLE command received");
+    case 0x01: // Set_IDLE Command - Params(0 = Off, 1 = On)
+      DEBUG_SERIAL.println("Set_IDLE command received");
       if (RxArray[1] == 0x00) {
         idle = 0;
       } else {
         idle = 1;
       }
       break;
-    case 0x03: // Set_Direction Command - Params(rotation h, rotation l, pitch h, pitch l, speed)
-      Serial.println("Set_Direction command received");
+    case 0x02: // Set_Direction Command - Params(rotation h, rotation l, pitch h, pitch l, speed)
+      DEBUG_SERIAL.println("Set_Direction command received");
       position_turn = ((RxArray[1] << 8) + RxArray[2]) * 0.1;
       position_vert = ((RxArray[3] << 8) + RxArray[4]) * 0.1;
       position_speed = RxArray[5];
       newMovement = 1;
       break;
   }
-
-  /*for (int i = 0; i < numBytes; i++) { DEBUG_SERIAL.print(RxArray[i]); }
-    DEBUG_SERIAL.println();
-  */
 }
 
 
 // ----------------------- setup() -----------------------
 void setup() {
+  unsigned long serialTimout = millis();
+
   DEBUG_SERIAL.begin(115200);
+  while(!DEBUG_SERIAL && millis() - serialTimout <= 5000);
 
   dxl.begin(57600);
   dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
 
-  Wire.begin(4); // Initialize I2C (Slave Mode: address=0x5A)
+  Wire.begin(90); // Initialize I2C (Slave Mode: address=0x5A)
   Wire.onReceive(I2C_RxHandler);
 
   // Configure the two neck motors
@@ -111,7 +110,7 @@ void setup() {
   onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 0, 10));
   onboard_pixel.show();
 
-  DEBUG_SERIAL.print("INFO: Starting application...");
+  DEBUG_SERIAL.println("INFO: Starting application...");
 }
 
 
