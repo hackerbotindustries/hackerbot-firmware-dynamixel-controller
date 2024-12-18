@@ -2,6 +2,7 @@
 HackerBot Industries, LLC
 Ian Bernstein
 April 2024
+Updated: 2024.12.17
 
 This sketch is written for the "Dynamixel Controller" PCB and moves the head
 around in random but natural looking patterns.
@@ -11,7 +12,10 @@ in a specified directions. Also, commands to enable/diable idle mode.
 *********************************************************************************/
 
 #include <Dynamixel2Arduino.h>
+#include <Adafruit_NeoPixel.h>
 #include <Wire.h>
+
+Adafruit_NeoPixel onboard_pixel(1, PIN_NEOPIXEL);
 
 // Set up variables and constants for dynamixel control
 #define DXL_SERIAL   Serial1
@@ -102,6 +106,10 @@ void setup() {
 
   dxl.writeControlTableItem(PROFILE_ACCELERATION, DXL_VERT_ID, 10);
   dxl.writeControlTableItem(PROFILE_VELOCITY, DXL_VERT_ID, 40);
+
+  onboard_pixel.begin();
+  onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 0, 10));
+  onboard_pixel.show();
 
   DEBUG_SERIAL.print("INFO: Starting application...");
 }
