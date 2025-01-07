@@ -2,7 +2,7 @@
 HackerBot Industries, LLC
 Ian Bernstein
 April 2024
-Updated: 2024.12.17
+Updated: 2025.01.06
 
 This sketch is written for the "Dynamixel Controller" PCB and moves the head
 around in random but natural looking patterns.
@@ -13,6 +13,7 @@ in a specified directions. Also, commands to enable/diable idle mode.
 
 #include <Dynamixel2Arduino.h>
 #include <Adafruit_NeoPixel.h>
+#include <SerialCmd.h>
 #include <Wire.h>
 
 // Set up variables and constants for dynamixel control
@@ -28,9 +29,10 @@ using namespace ControlTableItem;
 
 // Set up other valiables and constants
 #define DEBUG_SERIAL Serial
-
 unsigned long startMillis;
 unsigned long currentMillis;
+unsigned long startTimeoutMillis;
+const unsigned long timeoutMillis = 600000;
 byte RxArray[16];
 int idle = 1;
 int newMovement;
@@ -39,8 +41,17 @@ float position_vert;
 int position_delay;
 int position_speed;
 
+
 // Set up the onboard neopixel
 Adafruit_NeoPixel onboard_pixel(1, PIN_NEOPIXEL);
+
+// Set up the serial command processor
+#define SERIALCMD_MAXCMDNUM 20    // Max number of commands
+#define SERIALCMD_MAXCMDLNG 20    // Max command name length
+#define SERIALCMD_MAXBUFFER 32    // Max buffer length
+
+SerialCmd mySerCmd(Serial);
+
 
 // I2C Rx Handler
 void I2C_RxHandler(int numBytes) {
@@ -75,13 +86,62 @@ void I2C_RxHandler(int numBytes) {
 }
 
 
-// ----------------------- setup() -----------------------
+// -------------------------------------------------------
+// User Functions
+// -------------------------------------------------------
+void sendOK(void) {
+  mySerCmd.Print((char *) "INFO: OK\r\n");
+}
+
+
+// -------------------------------------------------------
+// Functions for SerialCmd
+// -------------------------------------------------------
+void send_PING(void) {
+  sendOK();
+}
+
+void set_IDLE(void) {
+  char * sParam;
+  sParam = mySerCmd.ReadNext();
+  if (sParam == NULL) {
+    mySerCmd.Print((char *) "ERROR: Missing idle parameter\r\n" );
+    return;
+  }
+
+  if (strtoul(sParam, NULL, 10) == 0) {
+    mySerCmd.Print((char *) "INFO: Idle mode off\r\n" );
+    idle = 0;
+    onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 10, 0));
+    onboard_pixel.show();
+  } else {
+    mySerCmd.Print((char *) "INFO: Idle mode on\r\n" );
+    idle = 1;
+    onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 0, 10));
+    onboard_pixel.show();
+    startTimeoutMillis = millis();
+  }
+
+  sendOK();
+}
+
+
+// -------------------------------------------------------
+// setup()
+// -------------------------------------------------------
 void setup() {
   unsigned long serialTimout = millis();
 
   DEBUG_SERIAL.begin(115200);
   while(!DEBUG_SERIAL && millis() - serialTimout <= 5000);
 
+  startTimeoutMillis = millis();
+
+  // Define serial commands
+  mySerCmd.AddCmd("PING", SERIALCMD_FROMALL, send_PING);
+  mySerCmd.AddCmd("IDLE", SERIALCMD_FROMALL, set_IDLE);
+
+  // Set up the dynamixel serial port
   dxl.begin(57600);
   dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
 
@@ -116,10 +176,14 @@ void setup() {
 
 // ----------------------- loop() ------------------------
 void loop() {
+  int8_t ret;
+
   currentMillis = millis();
-  //if (currentMillis - startMillis >= period) {
-    // Periodic items here
-  //}
+  
+  if (currentMillis - startTimeoutMillis >= timeoutMillis) {
+    ret = mySerCmd.ReadString((char *) "IDLE,0");
+    startTimeoutMillis = millis();
+  }
 
   if (idle == 1) {
     if (currentMillis - startMillis >= position_delay) {
@@ -158,5 +222,10 @@ void loop() {
 
       newMovement = 0;
     }
+  }
+
+  ret = mySerCmd.ReadSer();
+  if (ret == 0) {
+    mySerCmd.Print((char *) "ERROR: Urecognized command\r\n");
   }
 }
