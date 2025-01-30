@@ -15,12 +15,21 @@ in a specified directions. Also, commands to enable/diable idle mode.
 #include <Adafruit_NeoPixel.h>
 #include <SerialCmd.h>
 #include <Wire.h>
+#include "HackerbotSerialCmd.h"
 
 // Dynamixel Controller software version
 #define VERSION_NUMBER 2
 
 // I2C address (0x5B)
 #define I2C_ADDRESS 91
+
+// I2C command addresses
+// FIXME: need this to be sharable between projects - decide between a common library, a shared include directory (perhaps every s
+#define I2C_COMMAND_PING 0x01
+#define I2C_COMMAND_VERSION 0x02
+#define I2C_COMMAND_IDLE 0x08
+#define I2C_COMMAND_LOOK 0x09
+#define I2C_COMMAND_GAZE 0x0A
 
 // Set up variables and constants for dynamixel control
 #define DXL_SERIAL   Serial1
@@ -56,7 +65,7 @@ byte cmd = 0;
 Adafruit_NeoPixel onboard_pixel(1, PIN_NEOPIXEL);
 
 // Set up the serial command processor
-SerialCmd mySerCmd(Serial);
+HackerbotSerialCmd mySerCmd(Serial);
 int8_t ret;
 
 // I2C Rx Handler
@@ -76,15 +85,15 @@ void I2C_RxHandler(int numBytes) {
 
   // Parse incoming commands
   switch (I2CRxArray[0]) {
-    case 0x01: // Ping
-      cmd = 0x01;
+    case I2C_COMMAND_PING: // Ping
+      cmd = I2C_COMMAND_PING;
       I2CTxArray[0] = 0x01;
       break;
-    case 0x02: // Version
-      cmd = 0x02;
+    case I2C_COMMAND_VERSION: // Version
+      cmd = I2C_COMMAND_VERSION;
       I2CTxArray[0] = VERSION_NUMBER;
       break;
-    case 0x08: // Set_IDLE Command - Params(0 = off, 1 = on)
+    case I2C_COMMAND_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
       Serial.println("INFO: Set_IDLE command received");
       if (I2CRxArray[1] == 0x00) {
         ret = mySerCmd.ReadString((char *) "IDLE,0");
@@ -92,7 +101,7 @@ void I2C_RxHandler(int numBytes) {
         ret = mySerCmd.ReadString((char *) "IDLE,1");
       }
       break;
-    case 0x09: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
+    case I2C_COMMAND_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
       Serial.println("INFO: Set_LOOK command received");
 
       query = "LOOK," + (String)(((I2CRxArray[1] << 8) + I2CRxArray[2]) * 0.1) + "," + (String)(((I2CRxArray[3] << 8) + I2CRxArray[4]) * 0.1) + "," + (String)(I2CRxArray[5]);
@@ -108,10 +117,10 @@ void I2C_RxHandler(int numBytes) {
 // I2C Tx Handler
 void I2C_TxHandler(void) {
   switch (cmd) {
-    case 0x01: // Ping
+    case I2C_COMMAND_PING: // Ping
       Wire.write(I2CTxArray[0]);
       break;
-    case 0x02: // Version
+    case I2C_COMMAND_VERSION: // Version
       Wire.write(I2CTxArray[0]);
       break;
   }
@@ -134,14 +143,17 @@ void send_PING(void) {
 }
 
 void set_IDLE(void) {
-  char * sParam;
-  sParam = mySerCmd.ReadNext();
-  if (sParam == NULL) {
-    mySerCmd.Print((char *) "ERROR: Missing idle parameter\r\n" );
+  uint8_t idleParam = 0;
+
+  if (!mySerCmd.ReadNextUInt8(&idleParam)) {
+    mySerCmd.Print((char *) "ERROR: Missing parameter\r\n");
     return;
   }
 
-  if (strtoul(sParam, NULL, 10) == 0) {
+  // Constrain values to acceptable range
+  idleParam = constrain(idleParam, 0, 1);
+
+  if (idleParam == 0) {
     mySerCmd.Print((char *) "INFO: Idle mode off\r\n" );
     idle = 0;
     onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 10, 0));
@@ -158,48 +170,25 @@ void set_IDLE(void) {
 }
 
 void set_LOOK(void) {
-  float turnParam = atof(mySerCmd.ReadNext());
-  float vertParam = atof(mySerCmd.ReadNext());
-  float speedParam = atof(mySerCmd.ReadNext());
+  float turnParam = 0.0;
+  float vertParam = 0.0;
+  uint8_t speedParam = 0;
 
-  if ((turnParam == NULL) || (vertParam == NULL) || (speedParam == NULL)) {
+  if (!mySerCmd.ReadNextFloat(&turnParam) || !mySerCmd.ReadNextFloat(&vertParam) || !mySerCmd.ReadNextUInt8(&speedParam)) {
     mySerCmd.Print((char *) "ERROR: Missing parameter\r\n");
     return;
   }
 
   ret = mySerCmd.ReadString((char *) "IDLE,0");
 
-  if (turnParam < 100.0) {
-    position_yaw = 100.0;
-  } else if (turnParam > 260.0) {
-    position_yaw = 260.0;
-  } else {
-    position_yaw = turnParam;
-  }
+  // Constrain values to acceptable range
+  position_yaw = constrain(turnParam, 100.0, 260.0);
+  position_pitch = constrain(vertParam, 150.0, 250.0);
+  position_speed = constrain(speedParam, 6, 70);
 
-  if (vertParam < 150.0) {
-    position_pitch = 150.0;
-  } else if (vertParam > 250.0) {
-    position_pitch = 250.0;
-  } else {
-    position_pitch = vertParam;
-  }
-
-  if (speedParam < 6) {
-    position_speed = 6;
-  } else if (speedParam > 70) {
-    position_speed = 70;
-  } else {
-    position_speed = round(speedParam);
-  }
-
-  mySerCmd.Print((char *) "STATUS: Looking to position turn: ");
-  mySerCmd.Print(position_yaw);
-  mySerCmd.Print((char *) ", vert: ");
-  mySerCmd.Print(position_pitch);
-  mySerCmd.Print((char *) ", at speed: ");
-  mySerCmd.Print(position_speed);
-  mySerCmd.Print((char *) "\r\n");
+  char buf[128] = {0};
+  sprintf(buf, "STATUS: Looking to position turn: %0.2f, vert: %0.2f, at speed: %d\r\n", position_yaw, position_pitch, position_speed);
+  mySerCmd.Print(buf);
 
   newMovement = 1;
 
