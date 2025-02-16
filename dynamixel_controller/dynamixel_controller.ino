@@ -15,21 +15,11 @@ in a specified directions. Also, commands to enable/diable idle mode.
 #include <Adafruit_NeoPixel.h>
 #include <SerialCmd.h>
 #include <Wire.h>
+#include "HackerbotShared.h"
 #include "HackerbotSerialCmd.h"
 
 // Dynamixel Controller software version
 #define VERSION_NUMBER 2
-
-// I2C address (0x5B)
-#define I2C_ADDRESS 91
-
-// I2C command addresses
-// FIXME: need this to be sharable between projects - decide between a common library, a shared include directory (perhaps every s
-#define I2C_COMMAND_PING 0x01
-#define I2C_COMMAND_VERSION 0x02
-#define I2C_COMMAND_IDLE 0x08
-#define I2C_COMMAND_LOOK 0x09
-#define I2C_COMMAND_GAZE 0x0A
 
 // Set up variables and constants for dynamixel control
 #define DXL_SERIAL   Serial1
@@ -93,7 +83,7 @@ void I2C_RxHandler(int numBytes) {
       cmd = I2C_COMMAND_VERSION;
       I2CTxArray[0] = VERSION_NUMBER;
       break;
-    case I2C_COMMAND_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
+    case I2C_COMMAND_HEAD_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
       Serial.println("INFO: Set_IDLE command received");
       if (I2CRxArray[1] == 0x00) {
         ret = mySerCmd.ReadString((char *) "IDLE,0");
@@ -101,7 +91,7 @@ void I2C_RxHandler(int numBytes) {
         ret = mySerCmd.ReadString((char *) "IDLE,1");
       }
       break;
-    case I2C_COMMAND_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
+    case I2C_COMMAND_HEAD_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
       Serial.println("INFO: Set_LOOK command received");
 
       query = "LOOK," + (String)(((I2CRxArray[1] << 8) + I2CRxArray[2]) * 0.1) + "," + (String)(((I2CRxArray[3] << 8) + I2CRxArray[4]) * 0.1) + "," + (String)(I2CRxArray[5]);
@@ -217,7 +207,7 @@ void setup() {
   dxl.setPortProtocolVersion(DXL_PROTOCOL_VERSION);
 
   // Initialize I2C (Slave Mode: address=0x5B)
-  Wire.begin(I2C_ADDRESS);
+  Wire.begin(DYN_I2C_ADDRESS);
   Wire.onReceive(I2C_RxHandler);
   Wire.onRequest(I2C_TxHandler);
 
