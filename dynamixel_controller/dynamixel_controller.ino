@@ -2,24 +2,21 @@
 HackerBot Industries, LLC
 Ian Bernstein
 April 2024
-Updated: 2025.01.07
+Updated: 2025.03.11
 
 This sketch is written for the "Dynamixel Controller" PCB and moves the head
 around in random but natural looking patterns.
-
-TODO - Add I2C Slave code so other parts of hackerbot can send commands to look
-in a specified directions. Also, commands to enable/diable idle mode. 
 *********************************************************************************/
 
 #include <Dynamixel2Arduino.h>
 #include <Adafruit_NeoPixel.h>
 #include <SerialCmd.h>
 #include <Wire.h>
-#include "HackerbotShared.h"
-#include "HackerbotSerialCmd.h"
+#include "Hackerbot_Shared.h"
+#include "SerialCmd_Helper.h"
 
 // Dynamixel Controller software version
-#define VERSION_NUMBER 2
+#define VERSION_NUMBER 3
 
 // Set up variables and constants for dynamixel control
 #define DXL_SERIAL   Serial1
@@ -55,7 +52,7 @@ byte cmd = 0;
 Adafruit_NeoPixel onboard_pixel(1, PIN_NEOPIXEL);
 
 // Set up the serial command processor
-HackerbotSerialCmd mySerCmd(Serial);
+SerialCmdHelper mySerCmd(Serial);
 int8_t ret;
 
 // I2C Rx Handler
@@ -83,7 +80,7 @@ void I2C_RxHandler(int numBytes) {
       cmd = I2C_COMMAND_VERSION;
       I2CTxArray[0] = VERSION_NUMBER;
       break;
-    case I2C_COMMAND_HEAD_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
+    case I2C_COMMAND_H_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
       Serial.println("INFO: Set_IDLE command received");
       if (I2CRxArray[1] == 0x00) {
         ret = mySerCmd.ReadString((char *) "IDLE,0");
@@ -91,7 +88,7 @@ void I2C_RxHandler(int numBytes) {
         ret = mySerCmd.ReadString((char *) "IDLE,1");
       }
       break;
-    case I2C_COMMAND_HEAD_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
+    case I2C_COMMAND_H_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
       Serial.println("INFO: Set_LOOK command received");
 
       query = "LOOK," + (String)(((I2CRxArray[1] << 8) + I2CRxArray[2]) * 0.1) + "," + (String)(((I2CRxArray[3] << 8) + I2CRxArray[4]) * 0.1) + "," + (String)(I2CRxArray[5]);
@@ -132,6 +129,7 @@ void send_PING(void) {
   sendOK();
 }
 
+
 void set_IDLE(void) {
   uint8_t idleParam = 0;
 
@@ -146,12 +144,12 @@ void set_IDLE(void) {
   if (idleParam == 0) {
     mySerCmd.Print((char *) "INFO: Idle mode off\r\n" );
     idle = 0;
-    onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 10, 0));
+    onboard_pixel.setPixelColor(0, onboard_pixel.Color(10, 10, 0));
     onboard_pixel.show();
   } else {
     mySerCmd.Print((char *) "INFO: Idle mode on\r\n" );
     idle = 1;
-    onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 0, 10));
+    onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 10, 0));
     onboard_pixel.show();
     startTimeoutMillis = millis();
   }
@@ -159,6 +157,12 @@ void set_IDLE(void) {
   sendOK();
 }
 
+
+// Sets the position of the Hackerbot head's neck
+// Parameters
+// float: yaw (rotation angle between 100.0 and 260.0 degrees - 180.0 is looking straight ahead)
+// float: pitch (vertical angle between 150.0 and 250.0 degrees - 180.0 is looking straight ahead)
+// Example - "LOOK,180.0,180.0"
 void set_LOOK(void) {
   float turnParam = 0.0;
   float vertParam = 0.0;
@@ -230,7 +234,7 @@ void setup() {
   dxl.writeControlTableItem(PROFILE_VELOCITY, DXL_VERT_ID, 40);
 
   onboard_pixel.begin();
-  onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 0, 10));
+  onboard_pixel.setPixelColor(0, onboard_pixel.Color(0, 10, 0));
   onboard_pixel.show();
 
   Serial.println("INFO: Starting application...");
