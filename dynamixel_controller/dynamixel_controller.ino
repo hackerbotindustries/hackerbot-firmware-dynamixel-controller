@@ -1,12 +1,15 @@
 /****************************************************************************** 
 HackerBot Industries, LLC
-Ian Bernstein
-April 2024
-Updated: 2025.03.11
+Created By: Ian Bernstein
+Created:    April 2024
+Updated:    2025.03.11
 
-This sketch is written for the "Dynamixel Controller" PCB and moves the head
+This sketch is written for the "Dynamixel Controller" PCBA and moves the head
 around in random but natural looking patterns.
-*********************************************************************************/
+
+Special thanks to the following for their code contributions to this codebase:
+Randy  - https://github.com/rbeiter
+*******************************************************************************/
 
 #include <Dynamixel2Arduino.h>
 #include <Adafruit_NeoPixel.h>
