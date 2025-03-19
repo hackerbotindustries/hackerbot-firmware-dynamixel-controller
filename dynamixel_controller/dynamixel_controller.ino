@@ -2,7 +2,7 @@
 HackerBot Industries, LLC
 Created By: Ian Bernstein
 Created:    April 2024
-Updated:    2025.03.11
+Updated:    2025.03.18
 
 This sketch is written for the "Dynamixel Controller" PCBA and moves the head
 around in random but natural looking patterns.
@@ -19,7 +19,7 @@ Randy  - https://github.com/rbeiter
 #include "SerialCmd_Helper.h"
 
 // Dynamixel Controller software version
-#define VERSION_NUMBER 3
+#define VERSION_NUMBER 4
 
 // Set up variables and constants for dynamixel control
 #define DXL_SERIAL   Serial1
@@ -133,6 +133,17 @@ void send_PING(void) {
 }
 
 
+// Reports the current fw version
+// Example - "VERSION"
+void Get_Version(void) {
+  mySerCmd.Print((char *) "INFO: Dynamixel Controller Firmware (v");
+  mySerCmd.Print(VERSION_NUMBER);
+  mySerCmd.Print((char *) ".0)\r\n");
+
+  sendOK();
+}
+
+
 void set_IDLE(void) {
   uint8_t idleParam = 0;
 
@@ -206,8 +217,9 @@ void setup() {
 
   // Define serial commands
   mySerCmd.AddCmd("PING", SERIALCMD_FROMALL, send_PING);
-  mySerCmd.AddCmd("IDLE", SERIALCMD_FROMALL, set_IDLE);
-  mySerCmd.AddCmd("LOOK", SERIALCMD_FROMALL, set_LOOK);
+  mySerCmd.AddCmd("VERSION", SERIALCMD_FROMALL, Get_Version);
+  mySerCmd.AddCmd("H_IDLE", SERIALCMD_FROMALL, set_IDLE);
+  mySerCmd.AddCmd("H_LOOK", SERIALCMD_FROMALL, set_LOOK);
 
   // Set up the dynamixel serial port
   dxl.begin(57600);
