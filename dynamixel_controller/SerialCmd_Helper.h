@@ -1,9 +1,18 @@
 /*********************************************************************************
-Hackerbot Industries, LLC
-Created: February 2025
+Copyright (c) 2025 Hackerbot Industries LLC
+This source code is licensed under the MIT license found in the LICENSE file in 
+the root directory of this source tree.
 
-Adds some supplimental helper functions related to the SerialCmd libary
+Created By: Ian Bernstein
+Created:    February 2025
+Updated:    April 3, 2025
+
+This sketch adds some supplimental helper functions related to the SerialCmd libary
+
+Special thanks to the following for their code contributions to this codebase:
+Ian Bernstein - https://github.com/arobodude
 *********************************************************************************/
+
 
 #ifndef SERIALCMDHELPER_H
 #define SERIALCMDHELPER_H
