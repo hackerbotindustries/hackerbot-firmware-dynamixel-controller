@@ -1,15 +1,20 @@
-/****************************************************************************** 
-HackerBot Industries, LLC
+/*********************************************************************************
+Copyright (c) 2025 Hackerbot Industries LLC
+This source code is licensed under the MIT license found in the LICENSE file in 
+the root directory of this source tree.
+
 Created By: Ian Bernstein
 Created:    April 2024
-Updated:    2025.03.18
+Updated:    April 3, 2025
 
 This sketch is written for the "Dynamixel Controller" PCBA and moves the head
 around in random but natural looking patterns.
 
 Special thanks to the following for their code contributions to this codebase:
-Randy  - https://github.com/rbeiter
-*******************************************************************************/
+Ian Bernstein - https://github.com/arobodude
+Randy Beiter - https://github.com/rbeiter
+*********************************************************************************/
+
 
 #include <Dynamixel2Arduino.h>
 #include <Adafruit_NeoPixel.h>
