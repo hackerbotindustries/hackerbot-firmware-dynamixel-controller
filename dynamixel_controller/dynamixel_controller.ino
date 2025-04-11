@@ -91,9 +91,9 @@ void I2C_RxHandler(int numBytes) {
     case I2C_COMMAND_H_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
       Serial.println("INFO: Set_IDLE command received");
       if (I2CRxArray[1] == 0x00) {
-        ret = mySerCmd.ReadString((char *) "IDLE,0");
+        ret = mySerCmd.ReadString((char *) "H_IDLE,0");
       } else {
-        ret = mySerCmd.ReadString((char *) "IDLE,1");
+        ret = mySerCmd.ReadString((char *) "H_IDLE,1");
       }
       break;
     case I2C_COMMAND_H_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
@@ -192,7 +192,7 @@ void set_LOOK(void) {
     return;
   }
 
-  ret = mySerCmd.ReadString((char *) "IDLE,0");
+  ret = mySerCmd.ReadString((char *) "H_ IDLE,0");
 
   // Constrain values to acceptable range
   position_yaw = constrain(turnParam, 100.0, 260.0);
@@ -268,7 +268,7 @@ void loop() {
   currentMillis = millis();
   
   if (currentMillis - startTimeoutMillis >= timeoutMillis) {
-    ret = mySerCmd.ReadString((char *) "IDLE,0");
+    ret = mySerCmd.ReadString((char *) "H_IDLE,0");
     startTimeoutMillis = millis();
   }
 
