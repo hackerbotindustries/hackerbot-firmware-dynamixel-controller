@@ -91,15 +91,15 @@ void I2C_RxHandler(int numBytes) {
     case I2C_COMMAND_H_IDLE: // Set_IDLE Command - Params(0 = off, 1 = on)
       Serial.println("INFO: Set_IDLE command received");
       if (I2CRxArray[1] == 0x00) {
-        ret = mySerCmd.ReadString((char *) "IDLE,0");
+        ret = mySerCmd.ReadString((char *) "H_IDLE,0");
       } else {
-        ret = mySerCmd.ReadString((char *) "IDLE,1");
+        ret = mySerCmd.ReadString((char *) "H_IDLE,1");
       }
       break;
     case I2C_COMMAND_H_LOOK: // Set_LOOK Command - Params(yaw h, yaw l, pitch h, pitch l, speed)
       Serial.println("INFO: Set_LOOK command received");
 
-      query = "LOOK," + (String)(((I2CRxArray[1] << 8) + I2CRxArray[2]) * 0.1) + "," + (String)(((I2CRxArray[3] << 8) + I2CRxArray[4]) * 0.1) + "," + (String)(I2CRxArray[5]);
+      query = "H_LOOK," + (String)(((I2CRxArray[1] << 8) + I2CRxArray[2]) * 0.1) + "," + (String)(((I2CRxArray[3] << 8) + I2CRxArray[4]) * 0.1) + "," + (String)(I2CRxArray[5]);
       
       // Convert the query string to a char array
       query.toCharArray(CharArray, query.length() + 1);
@@ -192,7 +192,8 @@ void set_LOOK(void) {
     return;
   }
 
-  ret = mySerCmd.ReadString((char *) "IDLE,0");
+  // ret = mySerCmd.ReadString((char *) "H_IDLE,0");
+  idle = 0;
 
   // Constrain values to acceptable range
   position_yaw = constrain(turnParam, 100.0, 260.0);
@@ -268,7 +269,7 @@ void loop() {
   currentMillis = millis();
   
   if (currentMillis - startTimeoutMillis >= timeoutMillis) {
-    ret = mySerCmd.ReadString((char *) "IDLE,0");
+    ret = mySerCmd.ReadString((char *) "H_IDLE,0");
     startTimeoutMillis = millis();
   }
 
